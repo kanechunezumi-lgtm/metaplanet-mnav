@@ -2,8 +2,30 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Metaplanet mNAV 電卓</title>
+<meta name="description" content="メタプラネット(東証3350)のmNAV倍率とEV mNAV倍率を計算します。ビットコイン価格は1分ごとに自動取得。">
+
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="icon-192.png" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+
+<meta name="theme-color" content="#F5F2EC" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#14171B" media="(prefers-color-scheme: dark)">
+
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="mNAV">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="Metaplanet mNAV 電卓">
+<meta property="og:description" content="メタプラネット(東証3350)のmNAV倍率とEV mNAV倍率を計算します。ビットコイン価格は1分ごとに自動取得。">
+<meta property="og:url" content="https://kanechunezumi-lgtm.github.io/metaplanet-mnav/">
+<meta property="og:image" content="https://kanechunezumi-lgtm.github.io/metaplanet-mnav/icon-512.png">
+<meta property="og:locale" content="ja_JP">
+<meta name="twitter:card" content="summary">
 <style>
   :root {
     --bg: #F5F2EC;
@@ -56,7 +78,11 @@
     font-family: "Yu Gothic", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Meiryo", sans-serif;
     display: flex;
     justify-content: center;
-    padding: 40px 20px 64px;
+    /* ホーム画面から standalone で開くとステータスバーの下まで描画されるため、
+       ノッチ・ホームインジケータ分を足しておく */
+    padding:
+      calc(40px + env(safe-area-inset-top)) calc(20px + env(safe-area-inset-right))
+      calc(64px + env(safe-area-inset-bottom)) calc(20px + env(safe-area-inset-left));
     -webkit-text-size-adjust: 100%;
   }
 
@@ -334,7 +360,11 @@
   }
 
   @media (max-width: 460px) {
-    body { padding: 28px 14px 48px; }
+    body {
+      padding:
+        calc(28px + env(safe-area-inset-top)) calc(14px + env(safe-area-inset-right))
+        calc(48px + env(safe-area-inset-bottom)) calc(14px + env(safe-area-inset-left));
+    }
     .card { padding: 18px; }
     h1 { font-size: 25px; }
     .mnav-value { font-size: 34px; }
@@ -362,7 +392,7 @@
       <label for="stockPrice">株価 <span class="unit">(円・3350 メタプラネット)</span></label>
       <div class="input-wrap">
         <span class="prefix">&yen;</span>
-        <input id="stockPrice" type="number" inputmode="decimal" step="0.01" min="0" value="220.00" class="mono">
+        <input id="stockPrice" type="number" inputmode="decimal" step="0.01" min="0" value="222.00" class="mono">
       </div>
     </div>
 
@@ -370,7 +400,7 @@
       <label for="btcPrice">ビットコイン価格 <span class="unit">(円 / BTC)</span></label>
       <div class="input-wrap">
         <span class="prefix">&yen;</span>
-        <input id="btcPrice" type="number" inputmode="decimal" step="1" min="0" value="10231760" class="mono">
+        <input id="btcPrice" type="number" inputmode="decimal" step="1" min="0" value="10236237" class="mono">
       </div>
       <div class="price-status" id="priceStatus">
         <span class="dot loading" id="statusDot"></span>
@@ -399,7 +429,7 @@
           <label for="debt">有利子負債残高</label>
           <div class="input-wrap">
             <span class="prefix">&yen;</span>
-            <input id="debt" type="number" step="1" min="0" value="73200000000" class="mono">
+            <input id="debt" type="number" step="1" min="0" value="73300000000" class="mono">
           </div>
         </div>
         <div class="field">
@@ -411,7 +441,7 @@
         </div>
       </div>
       <p class="asof">
-        <strong>開示データ基準日 2026年8月10日。</strong>
+        <strong>開示データ基準日 2026年8月10日(有利子負債 &yen;733億)。</strong>
         BTC保有量 &#8383;43,000 と発行済株式数は、直近の購入(2026年6月30日・第54回、&#8383;2,823を追加)時点の開示値です。直近の購入は四半期ごと(2025年12月30日 &rarr; 2026年3月31日 &rarr; 2026年6月30日)のペースで、その後の買い増しはまだ開示されていません。新たな購入が発表されたら、ここのBTC保有量と株式数を更新してください。ビットコイン価格のみ自動取得のため、常に最新です。
       </p>
       <button class="reset-btn" id="resetBtn" type="button">既定値にリセット</button>
@@ -452,7 +482,7 @@
     </div>
 
     <div class="footnote">
-      EV mNAV = (時価総額 + 有利子負債 + 優先株残高) &divide; (BTC価格 &times; BTC保有量)。mNAV = (株価 &times; 発行済株式数) &divide; (BTC価格 &times; BTC保有量)。いずれも現金など他の貸借対照表項目は考慮しない簡易指標です。ビットコイン価格はCoinGecko(取得できない場合はKraken)から1分ごとに取得しています。株価は自動取得に対応した無償APIがないため手動入力です。保有量などの開示値は <a href="https://analytics.metaplanet.jp/" target="_blank" rel="noopener">analytics.metaplanet.jp</a> を参照しています。
+      EV mNAV = (時価総額 + 有利子負債 + 優先株残高) &divide; (BTC価格 &times; BTC保有量)。mNAV = (株価 &times; 発行済株式数) &divide; (BTC価格 &times; BTC保有量)。いずれも現金など他の貸借対照表項目は考慮しない簡易指標です。ビットコイン価格はCoinGeckoから1分ごとに取得し、取得できない場合はKrakenのBTC/USDに為替を掛けて円建てを導出します。倍率は本家の表示に合わせて切り捨てで2桁表示しています。株価は自動取得に対応した無償APIがないため手動入力です。保有量などの開示値は <a href="https://analytics.metaplanet.jp/" target="_blank" rel="noopener">analytics.metaplanet.jp</a> を参照しています。
     </div>
   </section>
 </div>
@@ -462,27 +492,38 @@
   'use strict';
 
   var DEFAULTS = {
-    stockPrice: 220.00,
-    btcPrice: 10231760,
+    stockPrice: 222.00,
+    btcPrice: 10236237,
     shares: 1281282000,
     btcHoldings: 43000,
-    debt: 73200000000,
+    debt: 73300000000,
     preferred: 23600000000
   };
 
-  // 主系 CoinGecko、フォールバック Kraken。どちらも CORS 許可を確認済み。
+  // 主系 CoinGecko、予備は BTC/USD × USD/JPY の導出。いずれも CORS 許可を確認済み。
+  // Kraken の BTC/JPY 板は24時間出来高が 0.03 BTC 程度しかなく、最終約定値が
+  // 実勢から 0.2〜0.5% ずれる。流動性のある BTC/USD から円建てを導出すると
+  // CoinGecko との差は 0.02% 程度に収まるため、そちらを予備系にしている。
   var SOURCES = [
     {
       name: 'CoinGecko',
-      url: 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=jpy',
-      parse: function (j) { return j && j.bitcoin ? j.bitcoin.jpy : NaN; }
+      get: function () {
+        return fetchJson('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=jpy')
+          .then(function (j) { return j && j.bitcoin ? j.bitcoin.jpy : NaN; });
+      }
     },
     {
-      name: 'Kraken',
-      url: 'https://api.kraken.com/0/public/Ticker?pair=XBTJPY',
-      parse: function (j) {
-        var r = j && j.result && j.result.XXBTZJPY;
-        return r && r.c ? parseFloat(r.c[0]) : NaN;
+      name: 'Kraken×為替',
+      get: function () {
+        return Promise.all([
+          fetchJson('https://api.kraken.com/0/public/Ticker?pair=XBTUSD'),
+          fetchJson('https://open.er-api.com/v6/latest/USD')
+        ]).then(function (r) {
+          var k = r[0] && r[0].result && r[0].result.XXBTZUSD;
+          var usd = k && k.c ? parseFloat(k.c[0]) : NaN;
+          var jpy = r[1] && r[1].rates ? r[1].rates.JPY : NaN;
+          return usd * jpy;
+        });
       }
     }
   ];
@@ -517,6 +558,15 @@
     return (yen / 1e8).toLocaleString('ja-JP', {
       maximumFractionDigits: 1, minimumFractionDigits: 1
     }) + '億円';
+  }
+
+  // analytics.metaplanet.jp は倍率を切り捨てて2桁表示している(例: 0.8664 -> 0.86)。
+  // 四捨五入すると 0.87 になり本家と食い違うため、表示だけ揃える。
+  // プレミアム/ディスカウントの % は切り捨て前の値から計算する。
+  function fmtMultiple(v) {
+    if (!isFinite(v)) return '—';
+    return (Math.floor(v * 100) / 100)
+      .toLocaleString('ja-JP', { maximumFractionDigits: 2, minimumFractionDigits: 2 });
   }
 
   function fmtTime(d) {
@@ -569,9 +619,8 @@
     var mnav = btcNav > 0 ? marketCap / btcNav : NaN;
     var evMnav = btcNav > 0 ? ev / btcNav : NaN;
 
-    var f2 = { maximumFractionDigits: 2, minimumFractionDigits: 2 };
-    els.mnavOut.textContent = isFinite(mnav) ? mnav.toLocaleString('ja-JP', f2) : '—';
-    els.evMnavOut.textContent = isFinite(evMnav) ? evMnav.toLocaleString('ja-JP', f2) : '—';
+    els.mnavOut.textContent = fmtMultiple(mnav);
+    els.evMnavOut.textContent = fmtMultiple(evMnav);
     els.mcVal.textContent = fmtOku(marketCap);
     els.evVal.textContent = fmtOku(ev);
     els.navVal.textContent = fmtOku(btcNav);
@@ -654,9 +703,8 @@
         return;
       }
       var src = SOURCES[i];
-      fetchJson(src.url)
-        .then(function (json) {
-          var price = src.parse(json);
+      src.get()
+        .then(function (price) {
           if (!isFinite(price) || price < MIN_PLAUSIBLE || price > MAX_PLAUSIBLE) {
             throw new Error('implausible price: ' + price);
           }

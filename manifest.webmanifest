@@ -1,0 +1,31 @@
+{
+  "name": "Metaplanet mNAV 電卓",
+  "short_name": "mNAV",
+  "description": "メタプラネット(3350)のmNAV / EV mNAV倍率を計算します。ビットコイン価格は1分ごとに自動取得。",
+  "lang": "ja",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F5F2EC",
+  "theme_color": "#2C4258",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
