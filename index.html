@@ -444,7 +444,7 @@
           <label for="shares">発行済普通株式数</label>
           <div class="input-wrap">
             <span class="prefix">株</span>
-            <input id="shares" type="number" step="1" min="1" value="1345352000" class="mono">
+            <input id="shares" type="number" step="1" min="1" value="1345340624" class="mono">
           </div>
         </div>
         <div class="field">
@@ -458,14 +458,14 @@
           <label for="debt">有利子負債残高</label>
           <div class="input-wrap">
             <span class="prefix">&yen;</span>
-            <input id="debt" type="number" step="1" min="0" value="71300000000" class="mono">
+            <input id="debt" type="number" step="1" min="0" value="71200000000" class="mono">
           </div>
         </div>
         <div class="field">
           <label for="preferred">優先株残高</label>
           <div class="input-wrap">
             <span class="prefix">&yen;</span>
-            <input id="preferred" type="number" step="1" min="0" value="23600000000" class="mono">
+            <input id="preferred" type="number" step="1" min="0" value="23610000000" class="mono">
           </div>
         </div>
       </div>
@@ -517,7 +517,7 @@
     </div>
 
     <div class="footnote">
-      EV mNAV = (時価総額 + 有利子負債 + 優先株残高) &divide; (BTC価格 &times; BTC保有量)。mNAV = (株価 &times; 発行済株式数) &divide; (BTC価格 &times; BTC保有量)。いずれも現金など他の貸借対照表項目は考慮しない簡易指標です。ビットコイン価格はCoinGeckoから1分ごとに取得し、取得できない場合はKrakenのBTC/USDに為替を掛けて円建てを導出します。倍率は本家の表示に合わせて切り捨てで2桁表示しています。株価は自動取得に対応した無償APIがないため手動入力です。保有量などの開示値は <a href="https://analytics.metaplanet.jp/" target="_blank" rel="noopener">analytics.metaplanet.jp</a> を参照しています。
+      EV mNAV = (時価総額 + 有利子負債 + 優先株残高) &divide; (BTC価格 &times; BTC保有量)。mNAV = (株価 &times; 発行済株式数) &divide; (BTC価格 &times; BTC保有量)。いずれも現金など他の貸借対照表項目は考慮しない簡易指標です。ビットコイン価格はCoinGeckoから1分ごとに取得し、取得できない場合はKrakenのBTC/USDに為替を掛けて円建てを導出します。倍率は本家の表示に合わせて切り捨てで2桁表示しています。株価と前提条件(株数・BTC保有量・負債・優先株)は analytics.metaplanet.jp と同じデータ源から自動取得しています。
     </div>
   </section>
 </div>
@@ -529,11 +529,11 @@
   var DEFAULTS = {
     stockPrice: 246.00,
     btcPrice: 12079068,
-    shares: 1345352000,
+    shares: 1345340624,
     dilutedShares: 1631382824,
     btcHoldings: 43000,
-    debt: 71300000000,
-    preferred: 23600000000,
+    debt: 71200000000,
+    preferred: 23610000000,
     treasuryDate: '2026-08-31'
   };
 
