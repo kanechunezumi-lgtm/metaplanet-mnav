@@ -1,0 +1,5 @@
+# SDD の作業スクラッチ(ledger・brief・レビューパッケージ)
+.superpowers/
+
+# EnterWorktree が作る隔離作業場
+.claude/worktrees/
