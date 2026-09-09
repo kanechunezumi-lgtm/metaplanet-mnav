@@ -164,6 +164,12 @@
     border-color: var(--accent);
     box-shadow: 0 0 0 3px var(--accent-soft);
   }
+  /* 手で上書きしたフィールドの淡い印。エラーではなく意図した操作なので
+     dot.error の赤ではなく、focus と同系統の accent を薄く使う。 */
+  .input-wrap.is-manual {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+  }
   .input-wrap .prefix {
     padding: 0 0 0 14px;
     color: var(--text-muted);
@@ -426,6 +432,11 @@
       </div>
     </div>
 
+    <div class="price-status" id="assumpStatus">
+      <span class="dot loading" id="assumpDot"></span>
+      <span id="assumpText">前提条件を取得しています…</span>
+    </div>
+
     <details class="assumptions">
       <summary>前提条件を編集(株式数・BTC保有量・負債・優先株)</summary>
       <div class="grid2">
@@ -457,10 +468,6 @@
             <input id="preferred" type="number" step="1" min="0" value="23600000000" class="mono">
           </div>
         </div>
-      </div>
-      <div class="price-status" id="assumpStatus">
-        <span class="dot loading" id="assumpDot"></span>
-        <span id="assumpText">前提条件を取得しています…</span>
       </div>
       <p class="asof">
         前提条件は <a href="https://analytics.metaplanet.jp/" target="_blank" rel="noopener">analytics.metaplanet.jp</a> と同じデータ源(strategytracker)から自動取得しています。1日1回、または上の「更新」を押したときに取りに行きます。買い増しの開示があった日は「更新」で即座に反映されます。<br>
@@ -806,6 +813,15 @@
     setPill(els.evStatePill, evMnav);
   }
 
+  // 手動上書き中のフィールドには淡い印を付ける。stockPrice/btcPrice も
+  // 対象に含む(専用の状態行があっても、入力欄そのものにも印を残す)。
+  function markManual(key) {
+    var el = els[key];
+    if (el && el.parentElement) {
+      el.parentElement.classList.toggle('is-manual', !!manual[key]);
+    }
+  }
+
   function renderStatus(state) {
     var dot = els.statusDot;
     var txt = els.statusText;
@@ -813,6 +829,8 @@
     // 「自動更新に戻す」ボタンは状態が変わるたびに作り直す
     var existing = document.getElementById('resumeBtn');
     if (existing) existing.remove();
+
+    markManual('btcPrice');
 
     if (state === 'loading') {
       dot.className = 'dot loading';
@@ -856,6 +874,8 @@
     var old = document.getElementById('stockResumeBtn');
     if (old) old.remove();
 
+    markManual('stockPrice');
+
     if (manual.stockPrice) {
       els.stockDot.className = 'dot manual';
       els.stockText.textContent = '株価 手動入力中 ・ 自動取得は停止中';
@@ -886,14 +906,41 @@
     els.stockText.textContent = '株価 ・ strategytracker ・ ' + fmtTime(stockSource) + ' 取得';
   }
 
+  // 前提条件4項目の短縮ラベル。手動上書き中の行に「どれが」を出すため。
+  var ASSUMP_LABELS = { shares: '株数', btcHoldings: 'BTC保有量', debt: '負債', preferred: '優先株' };
+  var ASSUMP_KEYS = ['shares', 'btcHoldings', 'debt', 'preferred'];
+
   function renderAssumpStatus() {
     var old = document.getElementById('assumpRefreshBtn');
     if (old) old.remove();
 
-    if (assumpState === 'fallback') {
+    ASSUMP_KEYS.forEach(markManual);
+    var manualKeys = ASSUMP_KEYS.filter(function (k) { return manual[k]; });
+
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.id = 'assumpRefreshBtn';
+    btn.className = 'linkish';
+
+    if (manualKeys.length) {
+      // どれか1つでも手で編集したら前提条件の自動取得は全体で止まる。
+      // 個別に戻すより「まとめて自動に戻す」ボタン1つの方が分かりやすい。
+      els.assumpDot.className = 'dot manual';
+      var labels = manualKeys.map(function (k) { return ASSUMP_LABELS[k]; }).join(', ');
+      els.assumpText.textContent = '前提条件 手動上書き中(' + labels + ') ・ 自動取得は停止中';
+      btn.textContent = '自動に戻す';
+      btn.addEventListener('click', function () {
+        manual.shares = false; manual.btcHoldings = false;
+        manual.debt = false; manual.preferred = false;
+        renderAssumpStatus();
+        refreshAssumptions(true);
+      });
+    } else if (assumpState === 'fallback') {
       // 黙って古い数字を出すのが元々の問題だったので、ここは目立たせる
       els.assumpDot.className = 'dot error';
       els.assumpText.textContent = '自動取得できず ・ ' + DEFAULTS.treasuryDate + '時点の固定値';
+      btn.textContent = '更新';
+      btn.addEventListener('click', function () { refreshAssumptions(true); });
     } else {
       var d = assumpMeta ? assumpMeta.treasuryDate : DEFAULTS.treasuryDate;
       var at = assumpMeta ? new Date(assumpMeta.fetchedAt) : null;
@@ -905,15 +952,11 @@
         els.assumpDot.className = 'dot live';
         els.assumpText.textContent = '前提条件 ・ ' + d + '開示 ・ ' + when + ' 取得';
       }
+      btn.textContent = '更新';
+      btn.addEventListener('click', function () { refreshAssumptions(true); });
     }
 
-    var refresh = document.createElement('button');
-    refresh.type = 'button';
-    refresh.id = 'assumpRefreshBtn';
-    refresh.className = 'linkish';
-    refresh.textContent = '更新';
-    refresh.addEventListener('click', function () { refreshAssumptions(true); });
-    els.assumpStatus.appendChild(refresh);
+    els.assumpStatus.appendChild(btn);
   }
 
   function fetchJson(url, cacheMode) {
