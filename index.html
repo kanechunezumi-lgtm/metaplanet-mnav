@@ -404,7 +404,7 @@
   <div>
     <div class="eyebrow">Bitcoin Treasury Multiple</div>
     <h1>Metaplanet mNAV 電卓</h1>
-    <p class="lede">ビットコイン価格は1分ごとに自動取得します。株価を入力すると、有利子負債・優先株を加味した <code>企業価値(EV) ÷ ビットコインNAV</code> のEV mNAV倍率と、<code>時価総額 ÷ ビットコインNAV</code> のmNAV倍率を自動計算します。</p>
+    <p class="lede">ビットコイン価格・株価・前提条件(株数・BTC保有量・負債・優先株)は自動取得されます。有利子負債・優先株を加味した <code>企業価値(EV) ÷ ビットコインNAV</code> のEV mNAV倍率と、<code>時価総額 ÷ ビットコインNAV</code> のmNAV倍率を自動計算します。</p>
   </div>
 
   <section class="card">
@@ -526,6 +526,8 @@
 (function () {
   'use strict';
 
+  // 自動取得もキャッシュも使えないときの最後の砦。2026-09-09 時点の実測値。
+  // 通常はここに落ちてこない。落ちたときは画面に赤く出る。
   var DEFAULTS = {
     stockPrice: 246.00,
     btcPrice: 12079068,
