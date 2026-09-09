@@ -392,7 +392,7 @@
       <label for="stockPrice">株価 <span class="unit">(円・3350 メタプラネット)</span></label>
       <div class="input-wrap">
         <span class="prefix">&yen;</span>
-        <input id="stockPrice" type="number" inputmode="decimal" step="0.01" min="0" value="222.00" class="mono">
+        <input id="stockPrice" type="number" inputmode="decimal" step="0.01" min="0" value="246.00" class="mono">
       </div>
     </div>
 
@@ -400,7 +400,7 @@
       <label for="btcPrice">ビットコイン価格 <span class="unit">(円 / BTC)</span></label>
       <div class="input-wrap">
         <span class="prefix">&yen;</span>
-        <input id="btcPrice" type="number" inputmode="decimal" step="1" min="0" value="10236237" class="mono">
+        <input id="btcPrice" type="number" inputmode="decimal" step="1" min="0" value="12079068" class="mono">
       </div>
       <div class="price-status" id="priceStatus">
         <span class="dot loading" id="statusDot"></span>
@@ -415,7 +415,7 @@
           <label for="shares">発行済普通株式数</label>
           <div class="input-wrap">
             <span class="prefix">株</span>
-            <input id="shares" type="number" step="1" min="1" value="1281282000" class="mono">
+            <input id="shares" type="number" step="1" min="1" value="1345352000" class="mono">
           </div>
         </div>
         <div class="field">
@@ -429,7 +429,7 @@
           <label for="debt">有利子負債残高</label>
           <div class="input-wrap">
             <span class="prefix">&yen;</span>
-            <input id="debt" type="number" step="1" min="0" value="73300000000" class="mono">
+            <input id="debt" type="number" step="1" min="0" value="71300000000" class="mono">
           </div>
         </div>
         <div class="field">
@@ -441,8 +441,11 @@
         </div>
       </div>
       <p class="asof">
-        <strong>開示データ基準日 2026年8月10日(有利子負債 &yen;733億)。</strong>
-        BTC保有量 &#8383;43,000 と発行済株式数は、直近の購入(2026年6月30日・第54回、&#8383;2,823を追加)時点の開示値です。直近の購入は四半期ごと(2025年12月30日 &rarr; 2026年3月31日 &rarr; 2026年6月30日)のペースで、その後の買い増しはまだ開示されていません。新たな購入が発表されたら、ここのBTC保有量と株式数を更新してください。ビットコイン価格のみ自動取得のため、常に最新です。
+        <strong>開示データ基準日 2026年9月9日(有利子負債 &yen;713億・優先株 &yen;236億)。</strong>
+        負債・優先株・BTC保有量は <a href="https://analytics.metaplanet.jp/" target="_blank" rel="noopener">analytics.metaplanet.jp</a> の「クレジット概要」の表示値です。
+        発行済普通株式数 1,345,352,000 株は、同サイトの「1株あたりNAV(希薄化前) &yen;386.07」から逆算した推定値で、直接開示された数字ではありません(誤差 &plusmn;0.01% 程度)。
+        BTC保有量 &#8383;43,000 は直近の購入(2026年6月30日・第54回、&#8383;2,823を追加)時点のままです。購入は四半期ごと(2025年12月30日 &rarr; 2026年3月31日 &rarr; 2026年6月30日)のペースで、その後の買い増しはまだ開示されていません。
+        新たな購入や資金調達が発表されたら、ここのBTC保有量・株式数・負債を更新してください。ビットコイン価格のみ自動取得のため、常に最新です。
       </p>
       <button class="reset-btn" id="resetBtn" type="button">既定値にリセット</button>
     </details>
@@ -492,11 +495,11 @@
   'use strict';
 
   var DEFAULTS = {
-    stockPrice: 222.00,
-    btcPrice: 10236237,
-    shares: 1281282000,
+    stockPrice: 246.00,
+    btcPrice: 12079068,
+    shares: 1345352000,
     btcHoldings: 43000,
-    debt: 73300000000,
+    debt: 71300000000,
     preferred: 23600000000
   };
 
