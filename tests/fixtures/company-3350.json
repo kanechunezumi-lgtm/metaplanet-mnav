@@ -1,0 +1,33 @@
+{
+  "companies": {
+    "3350.T": {
+      "processedMetrics": {
+        "sharesOutstanding": 1281253293.0,
+        "latestTotalShares": 1345340624,
+        "latestDilutedShares": 1631382824,
+        "latestBtcBalance": 43000.0,
+        "latestDebt": 464065700.0,
+        "latestTreasuryDate": "2026-08-31",
+        "currencyInfo": {
+          "originalCurrency": "JPY",
+          "targetCurrency": "USD",
+          "fxRate": 0.00652137,
+          "conversionApplied": true
+        },
+        "preferredStocks": [
+          {
+            "ticker": "MERCURY",
+            "name": "Class B Perpetual Convertible Preferred Shares",
+            "notionalMillions": 23610.0,
+            "notionalUSD": 153969545.7,
+            "currency": "JPY",
+            "fxRate": 153.34201249124033,
+            "parValue": 1000.0,
+            "dividendRate": 4.9,
+            "isTraded": false
+          }
+        ]
+      }
+    }
+  }
+}

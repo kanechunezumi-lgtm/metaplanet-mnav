@@ -503,6 +503,44 @@
     preferred: 23600000000
   };
 
+  // ここから PURE:END までは DOM に触れない純粋関数だけを置く。
+  // tests/pure.mjs がこのマーカー間を切り出して node --test で検証する。
+  /* --- PURE:BEGIN --- */
+  var PURE = (function () {
+    function num(v) {
+      return (typeof v === 'number' && isFinite(v)) ? v : NaN;
+    }
+
+    // strategytracker の company JSON から前提条件を取り出す。
+    // 検証に1項目でも落ちたら null を返す(部分採用しない)。
+    function parseAssumptions(json, prevTreasuryDate) {
+      var co = json && json.companies && json.companies['3350.T'];
+      var m = co && co.processedMetrics;
+      if (!m) return null;
+
+      // 同じオブジェクトに sharesOutstanding があるが、そちらは開示より古い値。
+      // 2026-09-09 時点で 1,281,253,293(実際は 1,345,340,624)だった。
+      var shares = num(m.latestTotalShares);
+      var dilutedShares = num(m.latestDilutedShares);
+      var btcHoldings = num(m.latestBtcBalance);
+      var treasuryDate = m.latestTreasuryDate;
+
+      return {
+        shares: shares,
+        dilutedShares: dilutedShares,
+        btcHoldings: btcHoldings,
+        debt: NaN,
+        preferred: NaN,
+        treasuryDate: treasuryDate
+      };
+    }
+
+    function parseStockPrice() { return NaN; }
+
+    return { parseAssumptions: parseAssumptions, parseStockPrice: parseStockPrice };
+  })();
+  /* --- PURE:END --- */
+
   // 主系 CoinGecko、予備は BTC/USD × USD/JPY の導出。いずれも CORS 許可を確認済み。
   // Kraken の BTC/JPY 板は24時間出来高が 0.03 BTC 程度しかなく、最終約定値が
   // 実勢から 0.2〜0.5% ずれる。流動性のある BTC/USD から円建てを導出すると
