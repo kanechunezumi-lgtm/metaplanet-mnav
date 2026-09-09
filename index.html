@@ -199,6 +199,10 @@
     color: var(--text-muted);
     min-height: 18px;
   }
+  /* 固定値まで後退したときは行の文字も警告色にする。7pxのドットだけでは
+     「黙って古い数字を出さない」という約束を果たせない。色はダークモードでも
+     読めるよう custom property 経由にし、地の色は変えずに警告に留める。 */
+  .price-status.is-fallback { color: var(--bad); }
   .dot {
     width: 7px; height: 7px;
     border-radius: 50%;
@@ -684,6 +688,8 @@
   // 前提条件が動くのは開示があったときだけ。版数は15分ごとに上がるが、
   // 中身が同じなのに808KBを引き直す意味はない。
   var ASSUMPTIONS_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+  // 期限切れ後に取得が失敗し続けても、60秒ポーリングから毎分引き直さないための下限
+  var ASSUMPTIONS_RETRY_MS = 10 * 60 * 1000;
   var FETCH_TIMEOUT_MS = 12000;
   // 明らかに壊れた値を弾くための範囲。過去の実測(約1,000万円)から十分widthを取る。
   var MIN_PLAUSIBLE = 100000;
@@ -720,6 +726,7 @@
   var assumpState = 'fallback';   // 'live' | 'cache' | 'fallback'
   var assumpMeta = null;          // { treasuryDate, fetchedAt }
   var assumpInFlight = false;
+  var assumpLastAttemptAt = 0;    // 自動呼び出しの再試行間隔を測るための最終試行時刻
   var stockSource = null;         // 取得できた時刻。null なら未取得
   var stockError = false;
 
@@ -741,6 +748,20 @@
 
   function fmtTime(d) {
     return d.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+
+  // 60秒ごとに更新される行と違い、前提条件は最長で1日据え置かれる。
+  // 「09:12 取得」とだけ出すと前日以前のキャッシュが今朝の値に見えてしまうので、
+  // 日付が今日でなければ日付を添える(例: 9/8 09:12)。
+  function fmtStamp(d) {
+    if (!d || !isFinite(d.getTime())) return '不明';
+    var now = new Date();
+    var sameDay = d.getFullYear() === now.getFullYear()
+      && d.getMonth() === now.getMonth()
+      && d.getDate() === now.getDate();
+    if (sameDay) return fmtTime(d);
+    return (d.getMonth() + 1) + '/' + d.getDate() + ' '
+      + d.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
   }
 
   function setPill(el, v) {
@@ -850,6 +871,9 @@
       btn.textContent = '自動更新に戻す';
       btn.addEventListener('click', function () {
         manual.btcPrice = false;
+        // 取得を待つ間、入力欄に手入力の値が残ったままにしない
+        restoreAuto(['btcPrice']);
+        recalc();
         renderStatus('loading');
         fetchNow();
       });
@@ -861,7 +885,8 @@
       dot.className = 'dot error';
       var base = '取得に失敗 ・ 1分後に再試行';
       if (lastFetchedAt) {
-        base += '（最終取得 ' + fmtTime(lastFetchedAt) + ' / ' + lastSource + '）';
+        // 失敗が続くと最終取得が前日以前になりうるので、ここだけ日付を添える
+        base += '（最終取得 ' + fmtStamp(lastFetchedAt) + ' / ' + lastSource + '）';
       }
       txt.textContent = base;
       return;
@@ -888,6 +913,9 @@
       btn.textContent = '自動に戻す';
       btn.addEventListener('click', function () {
         manual.stockPrice = false;
+        // 取得を待つ間、入力欄に手入力の値が残ったままにしない
+        restoreAuto(['stockPrice']);
+        recalc();
         renderStockStatus();
         refreshStockPrice();
       });
@@ -913,52 +941,77 @@
   var ASSUMP_KEYS = ['shares', 'btcHoldings', 'debt', 'preferred'];
 
   function renderAssumpStatus() {
-    var old = document.getElementById('assumpRefreshBtn');
-    if (old) old.remove();
+    var oldRefresh = document.getElementById('assumpRefreshBtn');
+    if (oldRefresh) oldRefresh.remove();
+    var oldAuto = document.getElementById('assumpAutoBtn');
+    if (oldAuto) oldAuto.remove();
 
     ASSUMP_KEYS.forEach(markManual);
     var manualKeys = ASSUMP_KEYS.filter(function (k) { return manual[k]; });
 
-    var btn = document.createElement('button');
-    btn.type = 'button';
-    btn.id = 'assumpRefreshBtn';
-    btn.className = 'linkish';
-
-    if (manualKeys.length) {
-      // どれか1つでも手で編集したら前提条件の自動取得は全体で止まる。
-      // 個別に戻すより「まとめて自動に戻す」ボタン1つの方が分かりやすい。
-      els.assumpDot.className = 'dot manual';
-      var labels = manualKeys.map(function (k) { return ASSUMP_LABELS[k]; }).join(', ');
-      els.assumpText.textContent = '前提条件 手動上書き中(' + labels + ') ・ 自動取得は停止中';
-      btn.textContent = '自動に戻す';
-      btn.addEventListener('click', function () {
-        manual.shares = false; manual.btcHoldings = false;
-        manual.debt = false; manual.preferred = false;
-        renderAssumpStatus();
-        refreshAssumptions(true);
-      });
-    } else if (assumpState === 'fallback') {
-      // 黙って古い数字を出すのが元々の問題だったので、ここは目立たせる
-      els.assumpDot.className = 'dot error';
-      els.assumpText.textContent = '自動取得できず ・ ' + DEFAULTS.treasuryDate + '時点の固定値';
-      btn.textContent = '更新';
-      btn.addEventListener('click', function () { refreshAssumptions(true); });
+    // 出所(live / cache / fallback)を先に文にしてから、手動上書きの注記を「足す」。
+    // 上書きを見つけた時点で分岐を打ち切ると、固定値まで後退している警告が消える。
+    // 株数がハードコードのままなのに画面が何も言わない状態こそ、この対応で
+    // 潰したかった元のバグなので、警告は上書きの有無に関わらず必ず残す。
+    var text, dotClass;
+    if (assumpState === 'fallback') {
+      dotClass = 'dot error';
+      text = '自動取得できず ・ ' + DEFAULTS.treasuryDate + '時点の固定値';
     } else {
       var d = assumpMeta ? assumpMeta.treasuryDate : DEFAULTS.treasuryDate;
       var at = assumpMeta ? new Date(assumpMeta.fetchedAt) : null;
-      var when = (at && isFinite(at.getTime())) ? fmtTime(at) : '不明';
+      var when = at ? fmtStamp(at) : '不明';
       if (assumpState === 'cache') {
-        els.assumpDot.className = 'dot manual';
-        els.assumpText.textContent = '前提条件 ・ ' + d + '開示 ・ キャッシュ(' + when + ' 取得)';
+        dotClass = 'dot manual';
+        text = '前提条件 ・ ' + d + '開示 ・ キャッシュ(' + when + ' 取得)';
       } else {
-        els.assumpDot.className = 'dot live';
-        els.assumpText.textContent = '前提条件 ・ ' + d + '開示 ・ ' + when + ' 取得';
+        dotClass = 'dot live';
+        text = '前提条件 ・ ' + d + '開示 ・ ' + when + ' 取得';
       }
-      btn.textContent = '更新';
-      btn.addEventListener('click', function () { refreshAssumptions(true); });
     }
 
-    els.assumpStatus.appendChild(btn);
+    if (manualKeys.length) {
+      // 止まるのは上書きした欄だけで、他の欄は setIfAuto が更新し続ける。
+      // 「自動取得は停止中」と書くと、裏で動いている取得を止めたことになって嘘になる。
+      var labels = manualKeys.map(function (k) { return ASSUMP_LABELS[k]; }).join('・');
+      text += ' ・ 手動上書き(' + labels + ') 上書き欄のみ停止';
+      // ドットの優先順位は error > manual > live/cache。固定値の赤は絶対に消さない。
+      if (dotClass !== 'dot error') dotClass = 'dot manual';
+    }
+
+    els.assumpDot.className = dotClass;
+    els.assumpText.textContent = text;
+    // ドット7pxだけでは警告として弱いので、後退時は行の文字ごと警告色にする
+    els.assumpStatus.classList.toggle('is-fallback', assumpState === 'fallback');
+
+    // 「更新」はどの状態でも出す。上書き中でも他の欄は取り直したいし、
+    // 固定値まで後退したときこそ再取得の入口が要る。
+    var refresh = document.createElement('button');
+    refresh.type = 'button';
+    refresh.id = 'assumpRefreshBtn';
+    refresh.className = 'linkish';
+    refresh.textContent = '更新';
+    refresh.addEventListener('click', function () { refreshAssumptions(true); });
+    els.assumpStatus.appendChild(refresh);
+
+    if (manualKeys.length) {
+      var auto = document.createElement('button');
+      auto.type = 'button';
+      auto.id = 'assumpAutoBtn';
+      auto.className = 'linkish';
+      auto.textContent = '自動に戻す';
+      auto.addEventListener('click', function () {
+        manual.shares = false; manual.btcHoldings = false;
+        manual.debt = false; manual.preferred = false;
+        // 取得を待たずに書き戻す。手入力の数字が欄に残ったまま行が
+        // 「固定値」や「キャッシュ」を名乗る状態を一瞬でも作らない。
+        restoreAuto(ASSUMP_KEYS);
+        recalc();
+        renderAssumpStatus();
+        refreshAssumptions(true);
+      });
+      els.assumpStatus.appendChild(auto);
+    }
   }
 
   function fetchJson(url, cacheMode) {
@@ -1003,6 +1056,24 @@
     el.value = value;
   }
 
+  // 手動フラグを外したら、取得を待たずに既知の最良値をその場で書き戻す。
+  // 取得は非同期で、圏外やキャッシュ無しでは永遠に返ってこないこともある。
+  // その間、印だけ消えて入力欄には手入力の数字が残り、状態行は
+  // 「固定値」と名乗る——という嘘の状態を作らないための同期処理。
+  // 前提条件はキャッシュ優先、株価・BTC価格はキャッシュが無いので固定値。
+  function restoreAuto(keys) {
+    var cached = readCache();
+    keys.forEach(function (k) {
+      var el = els[k];
+      if (!el) return;
+      var v = (cached && isFinite(cached[k])) ? cached[k] : DEFAULTS[k];
+      if (!isFinite(v)) return;
+      // 負債・優先株は換算後の小数を持つので、表示と同じく整数に丸める
+      if (k === 'debt' || k === 'preferred') v = Math.round(v);
+      el.value = v;
+    });
+  }
+
   function applyAssumptions(a, state) {
     setIfAuto(els.shares, 'shares', a.shares);
     setIfAuto(els.btcHoldings, 'btcHoldings', a.btcHoldings);
@@ -1015,16 +1086,28 @@
     renderAssumpStatus();
   }
 
-  function refreshAssumptions(force) {
+  // throttled は60秒ポーリングからの呼び出しだけに立てる。リロード・タブ復帰・
+  // 「更新」ボタンは今まで通り即座に試す。
+  function refreshAssumptions(force, throttled) {
     if (assumpInFlight) return;
     var cached = readCache();
     if (!force && cached) {
       var age = Date.now() - new Date(cached.fetchedAt).getTime();
       if (isFinite(age) && age < ASSUMPTIONS_MAX_AGE_MS) {
-        applyAssumptions(cached, 'cache');
+        // 60秒ポーリングからも呼ばれる。既に同じスナップショットを出しているなら
+        // 何もしない——さもないと live 取得の直後に毎分 cache 表示へ格下げしてしまう。
+        if (!assumpMeta || assumpMeta.fetchedAt !== cached.fetchedAt) {
+          applyAssumptions(cached, 'cache');
+        }
         return;
       }
     }
+    // キャッシュが期限切れで取得も失敗し続ける状況では、上の早期 return が
+    // 効かず毎分ネットワークに出てしまう。自動呼び出しにだけ再試行の下限を置く
+    // (「更新」ボタンからの force は常に通す)。
+    if (throttled && assumpLastAttemptAt
+        && (Date.now() - assumpLastAttemptAt) < ASSUMPTIONS_RETRY_MS) return;
+    assumpLastAttemptAt = Date.now();
     assumpInFlight = true;
     fetchAssumptions()
       .then(function (a) {
@@ -1093,6 +1176,11 @@
     timer = setInterval(function () {
       fetchNow();
       refreshStockPrice();
+      // 開きっぱなしのタブでも24時間ルールが効くようにする。リロードと
+      // visibilitychange だけに任せると、可視のまま何日も置かれた画面が
+      // 緑のライブ表示のまま何日も前の値を出し続ける。
+      // キャッシュが新しいうちは localStorage を1回読むだけで戻る。
+      refreshAssumptions(false, true);
     }, REFRESH_MS);
   }
   function stopPolling() {
@@ -1126,8 +1214,13 @@
     manual.stockPrice = false; manual.btcPrice = false;
     manual.shares = false; manual.btcHoldings = false;
     manual.debt = false; manual.preferred = false;
+    // 取得を待たずに全欄を書き戻し、3行とも同期で描き直す。印だけ消えて
+    // 手入力の数字が残る時間帯を作らない。
+    restoreAuto(['stockPrice', 'btcPrice'].concat(ASSUMP_KEYS));
+    recalc();
     renderStatus('loading');
     renderStockStatus();
+    renderAssumpStatus();
     fetchNow();
     refreshStockPrice();
     refreshAssumptions(true);
