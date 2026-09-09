@@ -155,7 +155,7 @@ test('BTC保有量と開示基準日を取る', () => {
 
 - [ ] **Step 4: 失敗を確認する**
 
-Run: `node --test tests/`
+Run: `node --test`
 Expected: FAIL — `index.html に PURE:BEGIN / PURE:END マーカーが見つからない`
 
 - [ ] **Step 5: 純粋関数ブロックを新設する**
@@ -204,7 +204,7 @@ Expected: FAIL — `index.html に PURE:BEGIN / PURE:END マーカーが見つ�
 
 - [ ] **Step 6: テストが通ることを確認する**
 
-Run: `node --test tests/`
+Run: `node --test`
 Expected: 3 tests PASS
 
 - [ ] **Step 7: コミット**
@@ -273,7 +273,7 @@ test('優先株が複数あれば合算し、USD建ての要素は換算する',
 
 - [ ] **Step 2: 失敗を確認する**
 
-Run: `node --test tests/`
+Run: `node --test`
 Expected: 4 FAIL(`debt` と `preferred` が `NaN`)
 
 - [ ] **Step 3: 換算を実装する**
@@ -320,7 +320,7 @@ Expected: 4 FAIL(`debt` と `preferred` が `NaN`)
 
 - [ ] **Step 4: テストが通ることを確認する**
 
-Run: `node --test tests/`
+Run: `node --test`
 Expected: 7 tests PASS
 
 - [ ] **Step 5: コミット**
@@ -402,7 +402,7 @@ test('正常な fixture は通る', () => {
 
 - [ ] **Step 2: 失敗を確認する**
 
-Run: `node --test tests/`
+Run: `node --test`
 Expected: 検証系の 6 テストが FAIL(`null` ではなく `NaN` 入りのオブジェクトが返る)
 
 - [ ] **Step 3: 検証を実装する**
@@ -433,7 +433,7 @@ Expected: 検証系の 6 テストが FAIL(`null` ではなく `NaN` 入りの�
 
 - [ ] **Step 4: テストが通ることを確認する**
 
-Run: `node --test tests/`
+Run: `node --test`
 Expected: 14 tests PASS
 
 - [ ] **Step 5: コミット**
@@ -532,7 +532,7 @@ test('価格が 0 以下なら捨てる', () => {
 
 - [ ] **Step 3: 失敗を確認する**
 
-Run: `node --test tests/`
+Run: `node --test`
 Expected: 株価系の 5 テストのうち少なくとも 2 つが FAIL
 
 - [ ] **Step 4: 実装する**
@@ -552,7 +552,7 @@ Expected: 株価系の 5 テストのうち少なくとも 2 つが FAIL
 
 - [ ] **Step 5: テストが通ることを確認する**
 
-Run: `node --test tests/`
+Run: `node --test`
 Expected: 19 tests PASS
 
 - [ ] **Step 6: コミット**
@@ -876,7 +876,7 @@ JSON.parse(localStorage.getItem('mnav.assumptions.v1'))
 
 - [ ] **Step 9: 回帰確認**
 
-Run: `node --test tests/`
+Run: `node --test`
 Expected: 19 tests PASS(純粋関数には触れていないので変化なし)
 
 - [ ] **Step 10: コミット**
@@ -1200,7 +1200,7 @@ Task 6 で置いた空の `renderStockStatus` / `renderAssumpStatus` を差し�
 
 - [ ] **Step 8: 回帰確認**
 
-Run: `node --test tests/`
+Run: `node --test`
 Expected: 19 tests PASS
 
 - [ ] **Step 9: コミット**
@@ -1323,7 +1323,7 @@ footnote の「株価は自動取得に対応した無償APIがないため手�
 
 - [ ] **Step 7: 全体を確認する**
 
-Run: `node --test tests/`
+Run: `node --test`
 Expected: 19 tests PASS
 
 ブラウザで `index.html` を開き、本家 analytics.metaplanet.jp と並べて
@@ -1353,7 +1353,7 @@ MSG
 
 ## 完了条件
 
-- `node --test tests/` が 19 件すべて通る
+- `node --test` が 19 件すべて通る
 - ブラウザで開いたとき、株価と前提条件が手入力なしで埋まる
 - 本家 analytics.metaplanet.jp の EV mNAV と 0.01 以内で一致する
 - オフラインでリロードしてもキャッシュで動き、状態が画面に出る
