@@ -498,9 +498,11 @@
     stockPrice: 246.00,
     btcPrice: 12079068,
     shares: 1345352000,
+    dilutedShares: 1631382824,
     btcHoldings: 43000,
     debt: 71300000000,
-    preferred: 23600000000
+    preferred: 23600000000,
+    treasuryDate: '2026-08-31'
   };
 
   // ここから PURE:END までは DOM に触れない純粋関数だけを置く。
@@ -644,6 +646,10 @@
   ];
 
   var REFRESH_MS = 60000;
+  var ST_BASE = 'https://data.strategytracker.com/';
+  // 前提条件が動くのは開示があったときだけ。版数は15分ごとに上がるが、
+  // 中身が同じなのに808KBを引き直す意味はない。
+  var ASSUMPTIONS_MAX_AGE_MS = 24 * 60 * 60 * 1000;
   var FETCH_TIMEOUT_MS = 12000;
   // 明らかに壊れた値を弾くための範囲。過去の実測(約1,000万円)から十分widthを取る。
   var MIN_PLAUSIBLE = 100000;
@@ -667,6 +673,13 @@
   var lastError = null;
   var timer = null;
   var inFlight = false;
+
+  var dilutedShares = DEFAULTS.dilutedShares;
+  var assumpState = 'fallback';   // 'live' | 'cache' | 'fallback'
+  var assumpMeta = null;          // { treasuryDate, fetchedAt }
+  var assumpInFlight = false;
+  var stockSource = null;         // 取得できた時刻。null なら未取得
+  var stockError = false;
 
   function fmtOku(yen) {
     if (!isFinite(yen)) return '—';
@@ -795,15 +808,100 @@
       + (lastFetchedAt ? fmtTime(lastFetchedAt) : '') + ' 取得';
   }
 
-  function fetchJson(url) {
+  function renderStockStatus() { /* Task 8 で実装 */ }
+  function renderAssumpStatus() { /* Task 8 で実装 */ }
+
+  function fetchJson(url, cacheMode) {
     var ctrl = new AbortController();
     var to = setTimeout(function () { ctrl.abort(); }, FETCH_TIMEOUT_MS);
-    return fetch(url, { signal: ctrl.signal, cache: 'no-store' })
+    return fetch(url, { signal: ctrl.signal, cache: cacheMode || 'no-store' })
       .then(function (res) {
         if (!res.ok) throw new Error('HTTP ' + res.status);
         return res.json();
       })
       .finally(function () { clearTimeout(to); });
+  }
+
+  // latest.json (283B) で版数を得てから、版数付きの本体を取りに行く。
+  // 版数なしの 3350_T.json は 403 になるのでこの2段は省略できない。
+  function fetchAssumptions() {
+    return fetchJson(ST_BASE + 'latest.json').then(function (j) {
+      var v = j && j.version;
+      if (!v) throw new Error('no version');
+      return fetchJson(ST_BASE + '3350_T.v' + v + '.json', 'default').then(function (co) {
+        var prev = assumpMeta ? assumpMeta.treasuryDate : null;
+        var a = PURE.parseAssumptions(co, prev);
+        if (!a) throw new Error('assumptions failed validation');
+        a.version = v;
+        a.fetchedAt = new Date().toISOString();
+        return a;
+      });
+    });
+  }
+
+  function fetchStockPrice() {
+    return fetchJson(ST_BASE + 'prices-live.json').then(function (j) {
+      var v = PURE.parseStockPrice(j);
+      if (!isFinite(v)) throw new Error('bad stock price');
+      return v;
+    });
+  }
+
+  // .value への代入は input イベントを発火しないので、手動入力とは区別される
+  function setIfAuto(el, key, value) {
+    if (typeof manual !== 'undefined' && manual[key]) return;
+    el.value = value;
+  }
+
+  function applyAssumptions(a, state) {
+    setIfAuto(els.shares, 'shares', a.shares);
+    setIfAuto(els.btcHoldings, 'btcHoldings', a.btcHoldings);
+    setIfAuto(els.debt, 'debt', Math.round(a.debt));
+    setIfAuto(els.preferred, 'preferred', Math.round(a.preferred));
+    dilutedShares = a.dilutedShares;
+    assumpState = state;
+    assumpMeta = { treasuryDate: a.treasuryDate, fetchedAt: a.fetchedAt };
+    recalc();
+    renderAssumpStatus();
+  }
+
+  function refreshAssumptions(force) {
+    if (assumpInFlight) return;
+    var cached = readCache();
+    if (!force && cached) {
+      var age = Date.now() - new Date(cached.fetchedAt).getTime();
+      if (isFinite(age) && age < ASSUMPTIONS_MAX_AGE_MS) {
+        applyAssumptions(cached, 'cache');
+        return;
+      }
+    }
+    assumpInFlight = true;
+    fetchAssumptions()
+      .then(function (a) {
+        writeCache(a);
+        applyAssumptions(a, 'live');
+      })
+      .catch(function () {
+        // 取得できなければキャッシュ、それも無ければハードコード値のまま
+        if (cached) applyAssumptions(cached, 'cache');
+        else { assumpState = 'fallback'; renderAssumpStatus(); }
+      })
+      .finally(function () { assumpInFlight = false; });
+  }
+
+  function refreshStockPrice() {
+    fetchStockPrice()
+      .then(function (v) {
+        setIfAuto(els.stockPrice, 'stockPrice', v);
+        stockSource = new Date();
+        stockError = false;
+        recalc();
+        renderStockStatus();
+      })
+      .catch(function () {
+        stockError = true;
+        renderStockStatus();
+      });
   }
 
   function fetchNow() {
@@ -842,7 +940,10 @@
 
   function startPolling() {
     stopPolling();
-    timer = setInterval(fetchNow, REFRESH_MS);
+    timer = setInterval(function () {
+      fetchNow();
+      refreshStockPrice();
+    }, REFRESH_MS);
   }
   function stopPolling() {
     if (timer) { clearInterval(timer); timer = null; }
@@ -882,13 +983,24 @@
       stopPolling();
     } else {
       fetchNow();
+      refreshStockPrice();
+      refreshAssumptions(false);
       startPolling();
     }
   });
 
+  // まずキャッシュ(無ければハードコード値)で即座に描いてから取得に行く。
+  // 808KB を待つ白画面は作らない。
+  var boot = readCache();
+  if (boot) applyAssumptions(boot, 'cache');
+
   recalc();
   renderStatus('loading');
+  renderStockStatus();
+  renderAssumpStatus();
   fetchNow();
+  refreshStockPrice();
+  refreshAssumptions(false);
   startPolling();
 })();
 </script>
