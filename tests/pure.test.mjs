@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseAssumptions, loadFixture } from './pure.mjs';
+import { parseAssumptions, parseStockPrice, loadFixture } from './pure.mjs';
 
 test('株数は latestTotalShares を使う(古い sharesOutstanding ではない)', () => {
   const a = parseAssumptions(loadFixture('company-3350.json'));
@@ -89,4 +89,32 @@ test('開示基準日がキャッシュより古ければ捨てる(データの�
 
 test('正常な fixture は通る', () => {
   assert.ok(parseAssumptions(loadFixture('company-3350.json')));
+});
+
+test('3350.T の円建て株価を取る', () => {
+  assert.equal(parseStockPrice(loadFixture('prices-live.json')), 255);
+});
+
+test('priceUsd を拾っていない', () => {
+  const v = parseStockPrice(loadFixture('prices-live.json'));
+  assert.notEqual(v, 1.66232205);
+  assert.ok(v > 10, `株価が USD 建てになっている: ${v}`);
+});
+
+test('通貨が JPY でなければ捨てる', () => {
+  const f = loadFixture('prices-live.json');
+  f.prices['3350.T'].currency = 'USD';
+  assert.ok(Number.isNaN(parseStockPrice(f)));
+});
+
+test('3350.T が無ければ捨てる', () => {
+  const f = loadFixture('prices-live.json');
+  delete f.prices['3350.T'];
+  assert.ok(Number.isNaN(parseStockPrice(f)));
+});
+
+test('価格が 0 以下なら捨てる', () => {
+  const f = loadFixture('prices-live.json');
+  f.prices['3350.T'].price = 0;
+  assert.ok(Number.isNaN(parseStockPrice(f)));
 });

@@ -1,0 +1,18 @@
+{
+  "prices": {
+    "3350.T": {
+      "price": 255,
+      "previousClose": 244,
+      "change": 11,
+      "changePercent": 4.5082,
+      "priceUsd": 1.66232205,
+      "currency": "JPY",
+      "fxRate": 0.00651891,
+      "volume": 37548100,
+      "timestamp": 1788930620,
+      "exchange": "JPX"
+    },
+    "MSTR": { "price": 180.5, "currency": "USD", "priceUsd": 180.5 }
+  },
+  "metadata": { "timestamp": "2026-09-09T05:10:20.000000+00:00" }
+}

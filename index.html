@@ -575,7 +575,14 @@
       };
     }
 
-    function parseStockPrice() { return NaN; }
+    // 同じオブジェクトに priceUsd(1.66)が並んでいる。取り違えると
+    // mNAV が 0.004 になるので、通貨を確認してからでないと price を使わない。
+    function parseStockPrice(json) {
+      var p = json && json.prices && json.prices['3350.T'];
+      if (!p || p.currency !== 'JPY') return NaN;
+      var v = num(p.price);
+      return v > 0 ? v : NaN;
+    }
 
     return { parseAssumptions: parseAssumptions, parseStockPrice: parseStockPrice };
   })();
