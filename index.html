@@ -525,12 +525,35 @@
       var btcHoldings = num(m.latestBtcBalance);
       var treasuryDate = m.latestTreasuryDate;
 
+      // このファイルには向きの違う為替レートが2つ入っている。
+      //   currencyInfo.fxRate      = 0.00652137  円 → ドル
+      //   preferredStocks[].fxRate = 153.342     ドル → 円 (= 1/上、実測で完全一致)
+      // 取り違えると桁が2万倍狂うので、正準を currencyInfo.fxRate に決めて
+      // 一度だけ反転して使う。優先株が無い期には preferredStocks[] が存在しないため、
+      // そちらの fxRate は参照しない。
+      var fxRate = num(m.currencyInfo && m.currencyInfo.fxRate);
+      var jpyPerUsd = fxRate > 0 ? 1 / fxRate : NaN;
+
+      var debt = num(m.latestDebt) * jpyPerUsd;
+
+      // 優先株は配列。将来増えても合算されるようにしておく。
+      var preferred = 0;
+      var list = m.preferredStocks || [];
+      for (var i = 0; i < list.length; i++) {
+        var p = list[i];
+        var v = (p.currency === 'JPY')
+          ? num(p.notionalMillions) * 1e6
+          : num(p.notionalUSD) * jpyPerUsd;
+        if (!isFinite(v)) { preferred = NaN; break; }
+        preferred += v;
+      }
+
       return {
         shares: shares,
         dilutedShares: dilutedShares,
         btcHoldings: btcHoldings,
-        debt: NaN,
-        preferred: NaN,
+        debt: debt,
+        preferred: preferred,
         treasuryDate: treasuryDate
       };
     }
