@@ -507,6 +507,11 @@
   // tests/pure.mjs がこのマーカー間を切り出して node --test で検証する。
   /* --- PURE:BEGIN --- */
   var PURE = (function () {
+    // 明らかに壊れた値を弾くための範囲。既存の MIN_PLAUSIBLE と同じ考え方で
+    // 実測値から十分に width を取る。
+    var MIN_BTC = 1000, MAX_BTC = 1000000;
+    var MIN_JPY_PER_USD = 50, MAX_JPY_PER_USD = 300;
+
     function num(v) {
       return (typeof v === 'number' && isFinite(v)) ? v : NaN;
     }
@@ -547,6 +552,18 @@
         if (!isFinite(v)) { preferred = NaN; break; }
         preferred += v;
       }
+
+      // 全部かゼロか。新しいBTC保有量と古い株数が混ざった状態は、
+      // 一貫して古いスナップショットより悪い数字を出す。
+      if (!(shares > 0) || !(dilutedShares >= shares)) return null;
+      if (!(btcHoldings >= MIN_BTC) || !(btcHoldings <= MAX_BTC)) return null;
+      if (!(jpyPerUsd >= MIN_JPY_PER_USD) || !(jpyPerUsd <= MAX_JPY_PER_USD)) return null;
+      if (!isFinite(debt) || debt < 0) return null;
+      if (!isFinite(preferred) || preferred < 0) return null;
+      if (typeof treasuryDate !== 'string' || !treasuryDate) return null;
+      if (!Array.isArray(m.preferredStocks)) return null;
+      // 日付は YYYY-MM-DD 固定なので文字列比較でよい
+      if (prevTreasuryDate && treasuryDate < prevTreasuryDate) return null;
 
       return {
         shares: shares,

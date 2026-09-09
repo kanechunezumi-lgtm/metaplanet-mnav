@@ -47,3 +47,46 @@ test('優先株が複数あれば合算し、USD建ての要素は換算する',
   // 23,610,000,000 + 10,000,000 USD × 153.34201249 = 25,143,420,125
   assert.ok(Math.abs(a.preferred - 25143420125) < 2, `preferred=${a.preferred}`);
 });
+
+function broken(mutate) {
+  const f = loadFixture('company-3350.json');
+  mutate(f.companies['3350.T'].processedMetrics);
+  return parseAssumptions(f);
+}
+
+test('フィールドが欠けたら全体を捨てる(部分採用しない)', () => {
+  assert.equal(broken(m => { delete m.latestDebt; }), null);
+  assert.equal(broken(m => { delete m.latestTotalShares; }), null);
+  assert.equal(broken(m => { delete m.latestBtcBalance; }), null);
+  assert.equal(broken(m => { delete m.preferredStocks; }), null);
+});
+
+test('希薄化後株式数が発行済を下回ったら捨てる', () => {
+  assert.equal(broken(m => { m.latestDilutedShares = 1000; }), null);
+});
+
+test('BTC保有量が現実的な範囲外なら捨てる', () => {
+  assert.equal(broken(m => { m.latestBtcBalance = 0; }), null);
+  assert.equal(broken(m => { m.latestBtcBalance = 5000000; }), null);
+});
+
+test('反転後の為替が範囲外なら捨てる', () => {
+  // fxRate 0.001 は jpyPerUsd 1000 に相当する
+  assert.equal(broken(m => { m.currencyInfo.fxRate = 0.001; }), null);
+  assert.equal(broken(m => { m.currencyInfo.fxRate = 0.5; }), null);
+});
+
+test('開示基準日が欠けたら捨てる', () => {
+  assert.equal(broken(m => { delete m.latestTreasuryDate; }), null);
+});
+
+test('開示基準日がキャッシュより古ければ捨てる(データの逆行)', () => {
+  const f = loadFixture('company-3350.json');
+  assert.equal(parseAssumptions(f, '2026-09-30'), null);
+  assert.ok(parseAssumptions(f, '2026-08-31'));
+  assert.ok(parseAssumptions(f, '2026-06-30'));
+});
+
+test('正常な fixture は通る', () => {
+  assert.ok(parseAssumptions(loadFixture('company-3350.json')));
+});
