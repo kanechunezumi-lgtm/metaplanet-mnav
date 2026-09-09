@@ -14,6 +14,7 @@
           "fxRate": 0.00652137,
           "conversionApplied": true
         },
+        "hasPreferredStocks": true,
         "preferredStocks": [
           {
             "ticker": "MERCURY",

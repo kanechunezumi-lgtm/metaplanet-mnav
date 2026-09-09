@@ -561,7 +561,16 @@
       if (!isFinite(debt) || debt < 0) return null;
       if (!isFinite(preferred) || preferred < 0) return null;
       if (typeof treasuryDate !== 'string' || !treasuryDate) return null;
-      if (!Array.isArray(m.preferredStocks)) return null;
+      // hasPreferredStocks が false なら優先株がゼロ償却された状態。
+      // schema が壊れたケース(flag が true/undefined のときに array が無い)と
+      // 区別するために、flag の値を確認する。
+      if (m.hasPreferredStocks === false) {
+        // 優先株がゼロ償却された場合、array が無くてもセーフ。
+        // ただし array が在れば、その内容は常に合算する。
+      } else if (!Array.isArray(m.preferredStocks)) {
+        // flag が無いか true なら、array は必須。
+        return null;
+      }
       // 日付は YYYY-MM-DD 固定なので文字列比較でよい
       if (prevTreasuryDate && treasuryDate < prevTreasuryDate) return null;
 

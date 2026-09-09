@@ -87,6 +87,24 @@ test('開示基準日がキャッシュより古ければ捨てる(データの�
   assert.ok(parseAssumptions(f, '2026-06-30'));
 });
 
+test('hasPreferredStocks が false なら preferredStocks が無くても通る', () => {
+  const f = loadFixture('company-3350.json');
+  f.companies['3350.T'].processedMetrics.hasPreferredStocks = false;
+  delete f.companies['3350.T'].processedMetrics.preferredStocks;
+  const a = parseAssumptions(f);
+  assert.ok(a);
+  assert.equal(a.preferred, 0);
+  assert.equal(a.shares, 1345340624);
+});
+
+test('hasPreferredStocks が false でも preferredStocks が在ればそれを合算する', () => {
+  const f = loadFixture('company-3350.json');
+  f.companies['3350.T'].processedMetrics.hasPreferredStocks = false;
+  const a = parseAssumptions(f);
+  assert.ok(a);
+  assert.equal(a.preferred, 23610000000);
+});
+
 test('正常な fixture は通る', () => {
   assert.ok(parseAssumptions(loadFixture('company-3350.json')));
 });
