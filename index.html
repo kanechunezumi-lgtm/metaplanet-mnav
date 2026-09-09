@@ -408,6 +408,10 @@
         <span class="prefix">&yen;</span>
         <input id="stockPrice" type="number" inputmode="decimal" step="0.01" min="0" value="246.00" class="mono">
       </div>
+      <div class="price-status" id="stockStatus">
+        <span class="dot loading" id="stockDot"></span>
+        <span id="stockText">株価を取得しています…</span>
+      </div>
     </div>
 
     <div class="field">
@@ -454,14 +458,15 @@
           </div>
         </div>
       </div>
+      <div class="price-status" id="assumpStatus">
+        <span class="dot loading" id="assumpDot"></span>
+        <span id="assumpText">前提条件を取得しています…</span>
+      </div>
       <p class="asof">
-        <strong>開示データ基準日 2026年9月9日(有利子負債 &yen;713億・優先株 &yen;236億)。</strong>
-        負債・優先株・BTC保有量は <a href="https://analytics.metaplanet.jp/" target="_blank" rel="noopener">analytics.metaplanet.jp</a> の「クレジット概要」の表示値です。
-        発行済普通株式数 1,345,352,000 株は、同サイトの「1株あたりNAV(希薄化前) &yen;386.07」から逆算した推定値で、直接開示された数字ではありません(誤差 &plusmn;0.01% 程度)。
-        BTC保有量 &#8383;43,000 は直近の購入(2026年6月30日・第54回、&#8383;2,823を追加)時点のままです。購入は四半期ごと(2025年12月30日 &rarr; 2026年3月31日 &rarr; 2026年6月30日)のペースで、その後の買い増しはまだ開示されていません。
-        新たな購入や資金調達が発表されたら、ここのBTC保有量・株式数・負債を更新してください。ビットコイン価格のみ自動取得のため、常に最新です。
+        前提条件は <a href="https://analytics.metaplanet.jp/" target="_blank" rel="noopener">analytics.metaplanet.jp</a> と同じデータ源(strategytracker)から自動取得しています。1日1回、または上の「更新」を押したときに取りに行きます。買い増しの開示があった日は「更新」で即座に反映されます。<br>
+        いずれかの欄を手で編集するとその欄だけ自動取得が止まり、「自動に戻す」で復帰します。他の欄は自動のまま動き続けるので、「もし株価が250円だったら」のような試算ができます。
       </p>
-      <button class="reset-btn" id="resetBtn" type="button">既定値にリセット</button>
+      <button class="reset-btn" id="resetBtn" type="button">すべて自動取得値に戻す</button>
     </details>
   </section>
 
@@ -686,10 +691,16 @@
     mcVal: $('mcVal'), evVal: $('evVal'), navVal: $('navVal'),
     mcBar: $('mcBar'), evBar: $('evBar'), navBar: $('navBar'),
     resetBtn: $('resetBtn'),
-    priceStatus: $('priceStatus'), statusDot: $('statusDot'), statusText: $('statusText')
+    priceStatus: $('priceStatus'), statusDot: $('statusDot'), statusText: $('statusText'),
+    stockStatus: $('stockStatus'), stockDot: $('stockDot'), stockText: $('stockText'),
+    assumpStatus: $('assumpStatus'), assumpDot: $('assumpDot'), assumpText: $('assumpText')
   };
 
-  var autoMode = true;
+  // フィールドごとの手動上書き。ひとつ手で編集しても他は自動のまま動く。
+  var manual = {
+    stockPrice: false, btcPrice: false,
+    shares: false, btcHoldings: false, debt: false, preferred: false
+  };
   var lastSource = null;
   var lastFetchedAt = null;
   var lastError = null;
@@ -809,7 +820,7 @@
       return;
     }
 
-    if (!autoMode) {
+    if (manual.btcPrice) {
       dot.className = 'dot manual';
       txt.textContent = '手動入力中 ・ 自動更新は停止中';
       var btn = document.createElement('button');
@@ -818,7 +829,7 @@
       btn.className = 'linkish';
       btn.textContent = '自動更新に戻す';
       btn.addEventListener('click', function () {
-        autoMode = true;
+        manual.btcPrice = false;
         renderStatus('loading');
         fetchNow();
       });
@@ -841,8 +852,69 @@
       + (lastFetchedAt ? fmtTime(lastFetchedAt) : '') + ' 取得';
   }
 
-  function renderStockStatus() { /* Task 8 で実装 */ }
-  function renderAssumpStatus() { /* Task 8 で実装 */ }
+  function renderStockStatus() {
+    var old = document.getElementById('stockResumeBtn');
+    if (old) old.remove();
+
+    if (manual.stockPrice) {
+      els.stockDot.className = 'dot manual';
+      els.stockText.textContent = '株価 手動入力中 ・ 自動取得は停止中';
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.id = 'stockResumeBtn';
+      btn.className = 'linkish';
+      btn.textContent = '自動に戻す';
+      btn.addEventListener('click', function () {
+        manual.stockPrice = false;
+        renderStockStatus();
+        refreshStockPrice();
+      });
+      els.stockStatus.appendChild(btn);
+      return;
+    }
+    if (stockError) {
+      els.stockDot.className = 'dot error';
+      els.stockText.textContent = '株価の取得に失敗 ・ 1分後に再試行';
+      return;
+    }
+    if (!stockSource) {
+      els.stockDot.className = 'dot loading';
+      els.stockText.textContent = '株価を取得しています…';
+      return;
+    }
+    els.stockDot.className = 'dot live';
+    els.stockText.textContent = '株価 ・ strategytracker ・ ' + fmtTime(stockSource) + ' 取得';
+  }
+
+  function renderAssumpStatus() {
+    var old = document.getElementById('assumpRefreshBtn');
+    if (old) old.remove();
+
+    if (assumpState === 'fallback') {
+      // 黙って古い数字を出すのが元々の問題だったので、ここは目立たせる
+      els.assumpDot.className = 'dot error';
+      els.assumpText.textContent = '自動取得できず ・ ' + DEFAULTS.treasuryDate + '時点の固定値';
+    } else {
+      var d = assumpMeta ? assumpMeta.treasuryDate : DEFAULTS.treasuryDate;
+      var at = assumpMeta ? new Date(assumpMeta.fetchedAt) : null;
+      var when = (at && isFinite(at.getTime())) ? fmtTime(at) : '不明';
+      if (assumpState === 'cache') {
+        els.assumpDot.className = 'dot manual';
+        els.assumpText.textContent = '前提条件 ・ ' + d + '開示 ・ キャッシュ(' + when + ' 取得)';
+      } else {
+        els.assumpDot.className = 'dot live';
+        els.assumpText.textContent = '前提条件 ・ ' + d + '開示 ・ ' + when + ' 取得';
+      }
+    }
+
+    var refresh = document.createElement('button');
+    refresh.type = 'button';
+    refresh.id = 'assumpRefreshBtn';
+    refresh.className = 'linkish';
+    refresh.textContent = '更新';
+    refresh.addEventListener('click', function () { refreshAssumptions(true); });
+    els.assumpStatus.appendChild(refresh);
+  }
 
   function fetchJson(url, cacheMode) {
     var ctrl = new AbortController();
@@ -938,7 +1010,7 @@
   }
 
   function fetchNow() {
-    if (inFlight || !autoMode) return;
+    if (inFlight || manual.btcPrice) return;
     inFlight = true;
 
     var attempt = function (i) {
@@ -954,7 +1026,7 @@
           if (!isFinite(price) || price < MIN_PLAUSIBLE || price > MAX_PLAUSIBLE) {
             throw new Error('implausible price: ' + price);
           }
-          if (autoMode) {
+          if (!manual.btcPrice) {
             // .value への代入は input イベントを発火しないので、手動入力とは区別される
             els.btcPrice.value = Math.round(price);
             recalc();
@@ -984,30 +1056,36 @@
 
   // 手動編集を検知したら自動更新を止める(プログラムからの代入では発火しない)
   els.btcPrice.addEventListener('input', function () {
-    if (autoMode) {
-      autoMode = false;
+    if (!manual.btcPrice) {
+      manual.btcPrice = true;
       renderStatus();
     }
     recalc();
   });
 
-  [els.stockPrice, els.shares, els.btcHoldings, els.debt, els.preferred].forEach(function (el) {
-    el.addEventListener('input', recalc);
+  // プログラムからの .value 代入では input は発火しないので、
+  // ここに来るのは人間が編集したときだけ。
+  [['stockPrice', renderStockStatus], ['shares', renderAssumpStatus],
+   ['btcHoldings', renderAssumpStatus], ['debt', renderAssumpStatus],
+   ['preferred', renderAssumpStatus]].forEach(function (pair) {
+    var key = pair[0], render = pair[1];
+    els[key].addEventListener('input', function () {
+      if (!manual[key]) { manual[key] = true; render(); }
+      recalc();
+    });
   });
 
+  // 「既定値に戻す」ではなく「自動取得値に戻す」。ハードコード値は
+  // あくまで取得できないときの最後の砦であって、戻る先ではない。
   els.resetBtn.addEventListener('click', function () {
-    els.stockPrice.value = DEFAULTS.stockPrice;
-    els.shares.value = DEFAULTS.shares;
-    els.btcHoldings.value = DEFAULTS.btcHoldings;
-    els.debt.value = DEFAULTS.debt;
-    els.preferred.value = DEFAULTS.preferred;
-    if (!autoMode) {
-      els.btcPrice.value = DEFAULTS.btcPrice;
-      autoMode = true;
-      renderStatus('loading');
-      fetchNow();
-    }
-    recalc();
+    manual.stockPrice = false; manual.btcPrice = false;
+    manual.shares = false; manual.btcHoldings = false;
+    manual.debt = false; manual.preferred = false;
+    renderStatus('loading');
+    renderStockStatus();
+    fetchNow();
+    refreshStockPrice();
+    refreshAssumptions(true);
   });
 
   // バックグラウンドではAPIを叩かず、復帰時にすぐ最新化する
