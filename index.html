@@ -323,6 +323,20 @@
   .pill.bad { background: var(--bad-soft); color: var(--bad); }
   .pill.flat { background: var(--surface-alt); color: var(--text-muted); }
 
+  .diluted {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .diluted .lead { font-weight: 700; color: var(--structure); }
+  .diluted .vals b { font-weight: 600; color: var(--text); }
+  .diluted .note { font-size: 12px; opacity: 0.85; }
+
   .bars { display: flex; flex-direction: column; gap: 10px; }
   .bar-row { display: flex; flex-direction: column; gap: 4px; }
   .bar-row .bar-label {
@@ -467,6 +481,12 @@
         </div>
         <div class="pill flat" id="statePill">&mdash;</div>
       </div>
+    </div>
+
+    <div class="diluted">
+      <span class="lead">完全希薄化後</span>
+      <span class="vals mono">EV mNAV <b id="evMnavDiluted">&mdash;</b>x ・ mNAV <b id="mnavDiluted">&mdash;</b>x</span>
+      <span class="note"><span id="dilutedSharesOut">&mdash;</span>株(ワラント等が全て行使された場合)</span>
     </div>
 
     <div class="bars">
@@ -660,6 +680,8 @@
     stockPrice: $('stockPrice'), btcPrice: $('btcPrice'), shares: $('shares'),
     btcHoldings: $('btcHoldings'), debt: $('debt'), preferred: $('preferred'),
     mnavOut: $('mnavOut'), evMnavOut: $('evMnavOut'),
+    evMnavDiluted: $('evMnavDiluted'), mnavDiluted: $('mnavDiluted'),
+    dilutedSharesOut: $('dilutedSharesOut'),
     statePill: $('statePill'), evStatePill: $('evStatePill'),
     mcVal: $('mcVal'), evVal: $('evVal'), navVal: $('navVal'),
     mcBar: $('mcBar'), evBar: $('evBar'), navBar: $('navBar'),
@@ -730,6 +752,8 @@
     if (!ok) {
       els.mnavOut.textContent = '—';
       els.evMnavOut.textContent = '—';
+      els.mnavDiluted.textContent = '—';
+      els.evMnavDiluted.textContent = '—';
       setPill(els.statePill, NaN);
       setPill(els.evStatePill, NaN);
       els.mcVal.textContent = '—';
@@ -757,6 +781,15 @@
     els.mcBar.style.width = (marketCap / maxVal * 100).toFixed(1) + '%';
     els.evBar.style.width = (ev / maxVal * 100).toFixed(1) + '%';
     els.navBar.style.width = (btcNav / maxVal * 100).toFixed(1) + '%';
+
+    // 希薄化後。発行済ベースとの差そのものが見たい情報なので、
+    // トグルで切り替えるのではなく常に並べて出す。
+    var dilMc = stockPrice * dilutedShares;
+    var dilEv = dilMc + debt + preferred;
+    els.mnavDiluted.textContent = fmtMultiple(btcNav > 0 ? dilMc / btcNav : NaN);
+    els.evMnavDiluted.textContent = fmtMultiple(btcNav > 0 ? dilEv / btcNav : NaN);
+    els.dilutedSharesOut.textContent = isFinite(dilutedShares)
+      ? dilutedShares.toLocaleString('ja-JP') : '—';
 
     setPill(els.statePill, mnav);
     setPill(els.evStatePill, evMnav);
