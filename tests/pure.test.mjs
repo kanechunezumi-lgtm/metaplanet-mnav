@@ -25,6 +25,12 @@ test('有利子負債を円に換算する(latestDebt は USD 建て)', () => {
   assert.ok(Math.abs(a.debt - 71160768366) < 1, `debt=${a.debt}`);
 });
 
+test('現金を円に換算する(latestCashBalance は USD 建て)', () => {
+  const a = parseAssumptions(loadFixture('company-3350.json'));
+  // 12,000,000 USD ÷ 0.00652137 = 1,840,104,150 円
+  assert.ok(Math.abs(a.cash - 1840104150) < 1, `cash=${a.cash}`);
+});
+
 test('為替を掛ける向きを間違えていない', () => {
   const a = parseAssumptions(loadFixture('company-3350.json'));
   // 向きを誤ると ¥302万 か ¥7.1京 になる。¥712億前後であることを固定する。
@@ -56,6 +62,7 @@ function broken(mutate) {
 
 test('フィールドが欠けたら全体を捨てる(部分採用しない)', () => {
   assert.equal(broken(m => { delete m.latestDebt; }), null);
+  assert.equal(broken(m => { delete m.latestCashBalance; }), null);
   assert.equal(broken(m => { delete m.latestTotalShares; }), null);
   assert.equal(broken(m => { delete m.latestBtcBalance; }), null);
   assert.equal(broken(m => { delete m.preferredStocks; }), null);

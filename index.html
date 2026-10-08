@@ -408,7 +408,7 @@
   <div>
     <div class="eyebrow">Bitcoin Treasury Multiple</div>
     <h1>Metaplanet mNAV 電卓</h1>
-    <p class="lede">ビットコイン価格・株価・前提条件(株数・BTC保有量・負債・優先株)は自動取得されます。有利子負債・優先株を加味した <code>企業価値(EV) ÷ ビットコインNAV</code> のEV mNAV倍率と、<code>時価総額 ÷ ビットコインNAV</code> のmNAV倍率を自動計算します。</p>
+    <p class="lede">ビットコイン価格・株価・前提条件(株数・BTC保有量・負債・優先株・現金)は自動取得されます。有利子負債・優先株・現金を加味した <code>企業価値(EV) ÷ ビットコインNAV</code> のEV mNAV倍率と、<code>時価総額 ÷ ビットコインNAV</code> のmNAV倍率を自動計算します。</p>
   </div>
 
   <section class="card">
@@ -416,7 +416,7 @@
       <label for="stockPrice">株価 <span class="unit">(円・3350 メタプラネット)</span></label>
       <div class="input-wrap">
         <span class="prefix">&yen;</span>
-        <input id="stockPrice" type="number" inputmode="decimal" step="0.01" min="0" value="246.00" class="mono">
+        <input id="stockPrice" type="number" inputmode="decimal" step="0.01" min="0" value="258.00" class="mono">
       </div>
       <div class="price-status" id="stockStatus">
         <span class="dot loading" id="stockDot"></span>
@@ -442,27 +442,27 @@
     </div>
 
     <details class="assumptions">
-      <summary>前提条件を編集(株式数・BTC保有量・負債・優先株)</summary>
+      <summary>前提条件を編集(株式数・BTC保有量・負債・優先株・現金)</summary>
       <div class="grid2">
         <div class="field">
           <label for="shares">発行済普通株式数</label>
           <div class="input-wrap">
             <span class="prefix">株</span>
-            <input id="shares" type="number" step="1" min="1" value="1345340624" class="mono">
+            <input id="shares" type="number" step="1" min="1" value="1364282624" class="mono">
           </div>
         </div>
         <div class="field">
           <label for="btcHoldings">BTC保有量</label>
           <div class="input-wrap">
             <span class="prefix">&#8383;</span>
-            <input id="btcHoldings" type="number" step="0.01" min="0" value="43000" class="mono">
+            <input id="btcHoldings" type="number" step="0.01" min="0" value="44000" class="mono">
           </div>
         </div>
         <div class="field">
           <label for="debt">有利子負債残高</label>
           <div class="input-wrap">
             <span class="prefix">&yen;</span>
-            <input id="debt" type="number" step="1" min="0" value="71200000000" class="mono">
+            <input id="debt" type="number" step="1" min="0" value="110400000000" class="mono">
           </div>
         </div>
         <div class="field">
@@ -470,6 +470,13 @@
           <div class="input-wrap">
             <span class="prefix">&yen;</span>
             <input id="preferred" type="number" step="1" min="0" value="23610000000" class="mono">
+          </div>
+        </div>
+        <div class="field">
+          <label for="cash">現金残高</label>
+          <div class="input-wrap">
+            <span class="prefix">&yen;</span>
+            <input id="cash" type="number" step="1" min="0" value="10400000000" class="mono">
           </div>
         </div>
       </div>
@@ -521,7 +528,7 @@
     </div>
 
     <div class="footnote">
-      EV mNAV = (時価総額 + 有利子負債 + 優先株残高) &divide; (BTC価格 &times; BTC保有量)。mNAV = (株価 &times; 発行済株式数) &divide; (BTC価格 &times; BTC保有量)。いずれも現金など他の貸借対照表項目は考慮しない簡易指標です。ビットコイン価格はCoinGeckoから1分ごとに取得し、取得できない場合はKrakenのBTC/USDに為替を掛けて円建てを導出します。倍率は本家の表示に合わせて切り捨てで2桁表示しています。株価と前提条件(株数・BTC保有量・負債・優先株)は analytics.metaplanet.jp と同じデータ源から自動取得しています。
+      EV mNAV = (時価総額 + 有利子負債 + 優先株残高 &minus; 現金残高) &divide; (BTC価格 &times; BTC保有量)。mNAV = (株価 &times; 発行済株式数) &divide; (BTC価格 &times; BTC保有量)。ビットコイン価格はCoinGeckoから1分ごとに取得し、取得できない場合はKrakenのBTC/USDに為替を掛けて円建てを導出します。倍率は本家の表示に合わせて四捨五入で2桁表示しています。株価と前提条件(株数・BTC保有量・負債・優先株・現金)は analytics.metaplanet.jp と同じデータ源から自動取得しています。
     </div>
   </section>
 </div>
@@ -530,17 +537,18 @@
 (function () {
   'use strict';
 
-  // 自動取得もキャッシュも使えないときの最後の砦。2026-09-09 時点の実測値。
+  // 自動取得もキャッシュも使えないときの最後の砦。2026-10-09 時点の実測値。
   // 通常はここに落ちてこない。落ちたときは画面に赤く出る。
   var DEFAULTS = {
-    stockPrice: 246.00,
-    btcPrice: 12079068,
-    shares: 1345340624,
-    dilutedShares: 1631382824,
-    btcHoldings: 43000,
-    debt: 71200000000,
+    stockPrice: 258.00,
+    btcPrice: 12898178,
+    shares: 1364282624,
+    dilutedShares: 1500108824,
+    btcHoldings: 44000,
+    debt: 110400000000,
     preferred: 23610000000,
-    treasuryDate: '2026-08-31'
+    cash: 10400000000,
+    treasuryDate: '2026-09-30'
   };
 
   // ここから PURE:END までは DOM に触れない純粋関数だけを置く。
@@ -580,6 +588,9 @@
       var jpyPerUsd = fxRate > 0 ? 1 / fxRate : NaN;
 
       var debt = num(m.latestDebt) * jpyPerUsd;
+      // 現金も USD 建て。本家は EV から引いている。2026-09 までは ¥18億で倍率に
+      // 響かなかったが、2026-09-30 開示で ¥104億になり 0.01〜0.02 動くようになった。
+      var cash = num(m.latestCashBalance) * jpyPerUsd;
 
       // 優先株は配列。将来増えても合算されるようにしておく。
       var preferred = 0;
@@ -599,6 +610,7 @@
       if (!(btcHoldings >= MIN_BTC) || !(btcHoldings <= MAX_BTC)) return null;
       if (!(jpyPerUsd >= MIN_JPY_PER_USD) || !(jpyPerUsd <= MAX_JPY_PER_USD)) return null;
       if (!isFinite(debt) || debt < 0) return null;
+      if (!isFinite(cash) || cash < 0) return null;
       if (!isFinite(preferred) || preferred < 0) return null;
       if (typeof treasuryDate !== 'string' || !treasuryDate) return null;
       // hasPreferredStocks が false なら優先株がゼロ償却された状態。
@@ -620,6 +632,7 @@
         btcHoldings: btcHoldings,
         debt: debt,
         preferred: preferred,
+        cash: cash,
         treasuryDate: treasuryDate
       };
     }
@@ -638,7 +651,8 @@
   /* --- PURE:END --- */
 
   // 808KB の生JSONは保存しない。抽出後の数値だけを持つ。
-  var CACHE_KEY = 'mnav.assumptions.v1';
+  // v2: cash を追加。cash を持たない v1 のキャッシュは読まない。
+  var CACHE_KEY = 'mnav.assumptions.v2';
 
   // プライベートウィンドウやサイトデータ拒否の設定では読み書き自体が
   // 例外を投げる。描画を止めないよう常に握りつぶす。
@@ -647,7 +661,7 @@
       var raw = localStorage.getItem(CACHE_KEY);
       if (!raw) return null;
       var a = JSON.parse(raw);
-      return (a && a.shares > 0 && a.treasuryDate) ? a : null;
+      return (a && a.shares > 0 && isFinite(a.cash) && a.treasuryDate) ? a : null;
     } catch (e) { return null; }
   }
 
@@ -699,6 +713,7 @@
   var els = {
     stockPrice: $('stockPrice'), btcPrice: $('btcPrice'), shares: $('shares'),
     btcHoldings: $('btcHoldings'), debt: $('debt'), preferred: $('preferred'),
+    cash: $('cash'),
     mnavOut: $('mnavOut'), evMnavOut: $('evMnavOut'),
     evMnavDiluted: $('evMnavDiluted'), mnavDiluted: $('mnavDiluted'),
     dilutedSharesOut: $('dilutedSharesOut'),
@@ -714,7 +729,7 @@
   // フィールドごとの手動上書き。ひとつ手で編集しても他は自動のまま動く。
   var manual = {
     stockPrice: false, btcPrice: false,
-    shares: false, btcHoldings: false, debt: false, preferred: false
+    shares: false, btcHoldings: false, debt: false, preferred: false, cash: false
   };
   var lastSource = null;
   var lastFetchedAt = null;
@@ -737,12 +752,12 @@
     }) + '億円';
   }
 
-  // analytics.metaplanet.jp は倍率を切り捨てて2桁表示している(例: 0.8664 -> 0.86)。
-  // 四捨五入すると 0.87 になり本家と食い違うため、表示だけ揃える。
-  // プレミアム/ディスカウントの % は切り捨て前の値から計算する。
+  // analytics.metaplanet.jp は倍率を四捨五入で2桁表示している
+  // (2026-10-09 実測: EV ¥4,754億 ÷ BTC NAV ¥5,675億 = 0.8377 -> 0.84)。
+  // プレミアム/ディスカウントの % は丸める前の値から計算する。
   function fmtMultiple(v) {
     if (!isFinite(v)) return '—';
-    return (Math.floor(v * 100) / 100)
+    return (Math.round(v * 100) / 100)
       .toLocaleString('ja-JP', { maximumFractionDigits: 2, minimumFractionDigits: 2 });
   }
 
@@ -786,8 +801,9 @@
     var btcHoldings = parseFloat(els.btcHoldings.value);
     var debt = parseFloat(els.debt.value);
     var preferred = parseFloat(els.preferred.value);
+    var cash = parseFloat(els.cash.value);
 
-    var vals = [stockPrice, btcPrice, shares, btcHoldings, debt, preferred];
+    var vals = [stockPrice, btcPrice, shares, btcHoldings, debt, preferred, cash];
     var ok = vals.every(function (v) { return isFinite(v) && v >= 0; });
 
     if (!ok) {
@@ -807,7 +823,7 @@
     }
 
     var marketCap = stockPrice * shares;
-    var ev = marketCap + debt + preferred;
+    var ev = marketCap + debt + preferred - cash;
     var btcNav = btcPrice * btcHoldings;
     var mnav = btcNav > 0 ? marketCap / btcNav : NaN;
     var evMnav = btcNav > 0 ? ev / btcNav : NaN;
@@ -826,7 +842,7 @@
     // 希薄化後。発行済ベースとの差そのものが見たい情報なので、
     // トグルで切り替えるのではなく常に並べて出す。
     var dilMc = stockPrice * dilutedShares;
-    var dilEv = dilMc + debt + preferred;
+    var dilEv = dilMc + debt + preferred - cash;
     els.mnavDiluted.textContent = fmtMultiple(btcNav > 0 ? dilMc / btcNav : NaN);
     els.evMnavDiluted.textContent = fmtMultiple(btcNav > 0 ? dilEv / btcNav : NaN);
     els.dilutedSharesOut.textContent = isFinite(dilutedShares)
@@ -936,9 +952,9 @@
     els.stockText.textContent = '株価 ・ strategytracker ・ ' + fmtTime(stockSource) + ' 取得';
   }
 
-  // 前提条件4項目の短縮ラベル。手動上書き中の行に「どれが」を出すため。
-  var ASSUMP_LABELS = { shares: '株数', btcHoldings: 'BTC保有量', debt: '負債', preferred: '優先株' };
-  var ASSUMP_KEYS = ['shares', 'btcHoldings', 'debt', 'preferred'];
+  // 前提条件5項目の短縮ラベル。手動上書き中の行に「どれが」を出すため。
+  var ASSUMP_LABELS = { shares: '株数', btcHoldings: 'BTC保有量', debt: '負債', preferred: '優先株', cash: '現金' };
+  var ASSUMP_KEYS = ['shares', 'btcHoldings', 'debt', 'preferred', 'cash'];
 
   function renderAssumpStatus() {
     var oldRefresh = document.getElementById('assumpRefreshBtn');
@@ -1002,7 +1018,7 @@
       auto.textContent = '自動に戻す';
       auto.addEventListener('click', function () {
         manual.shares = false; manual.btcHoldings = false;
-        manual.debt = false; manual.preferred = false;
+        manual.debt = false; manual.preferred = false; manual.cash = false;
         // 取得を待たずに書き戻す。手入力の数字が欄に残ったまま行が
         // 「固定値」や「キャッシュ」を名乗る状態を一瞬でも作らない。
         restoreAuto(ASSUMP_KEYS);
@@ -1068,8 +1084,8 @@
       if (!el) return;
       var v = (cached && isFinite(cached[k])) ? cached[k] : DEFAULTS[k];
       if (!isFinite(v)) return;
-      // 負債・優先株は換算後の小数を持つので、表示と同じく整数に丸める
-      if (k === 'debt' || k === 'preferred') v = Math.round(v);
+      // 負債・優先株・現金は換算後の小数を持つので、表示と同じく整数に丸める
+      if (k === 'debt' || k === 'preferred' || k === 'cash') v = Math.round(v);
       el.value = v;
     });
   }
@@ -1079,6 +1095,7 @@
     setIfAuto(els.btcHoldings, 'btcHoldings', a.btcHoldings);
     setIfAuto(els.debt, 'debt', Math.round(a.debt));
     setIfAuto(els.preferred, 'preferred', Math.round(a.preferred));
+    setIfAuto(els.cash, 'cash', Math.round(a.cash));
     dilutedShares = a.dilutedShares;
     assumpState = state;
     assumpMeta = { treasuryDate: a.treasuryDate, fetchedAt: a.fetchedAt };
@@ -1200,7 +1217,7 @@
   // ここに来るのは人間が編集したときだけ。
   [['stockPrice', renderStockStatus], ['shares', renderAssumpStatus],
    ['btcHoldings', renderAssumpStatus], ['debt', renderAssumpStatus],
-   ['preferred', renderAssumpStatus]].forEach(function (pair) {
+   ['preferred', renderAssumpStatus], ['cash', renderAssumpStatus]].forEach(function (pair) {
     var key = pair[0], render = pair[1];
     els[key].addEventListener('input', function () {
       if (!manual[key]) { manual[key] = true; render(); }
@@ -1213,7 +1230,7 @@
   els.resetBtn.addEventListener('click', function () {
     manual.stockPrice = false; manual.btcPrice = false;
     manual.shares = false; manual.btcHoldings = false;
-    manual.debt = false; manual.preferred = false;
+    manual.debt = false; manual.preferred = false; manual.cash = false;
     // 取得を待たずに全欄を書き戻し、3行とも同期で描き直す。印だけ消えて
     // 手入力の数字が残る時間帯を作らない。
     restoreAuto(['stockPrice', 'btcPrice'].concat(ASSUMP_KEYS));

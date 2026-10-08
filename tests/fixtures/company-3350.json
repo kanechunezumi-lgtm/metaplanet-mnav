@@ -7,6 +7,7 @@
         "latestDilutedShares": 1631382824,
         "latestBtcBalance": 43000.0,
         "latestDebt": 464065700.0,
+        "latestCashBalance": 12000000.0,
         "latestTreasuryDate": "2026-08-31",
         "currencyInfo": {
           "originalCurrency": "JPY",
